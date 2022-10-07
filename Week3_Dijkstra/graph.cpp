@@ -29,45 +29,45 @@ void Vertex::add_edge(std::shared_ptr<Edge> edge)
 }
 
 
-std::unordered_map<int, double> Vertex::get_edges() const
+const std::vector<std::pair<int, double>> Vertex::get_edges() const
 {
-    std::unordered_map<int, double> out_map;
+    std::vector<std::pair<int, double>> out_list;
     for (auto edge : conn_list) {
-        int other_i = edge->get_other(*this)->get_id();
+        int other_i = edge->get_other(*this).get_id();
         double weight = edge->get_weight();
-        out_map[other_i] = weight;
+        out_list.push_back(std::pair<int, double>(other_i, weight));
     }
-    return out_map;
+    return out_list;
 }
 
 
-Edge::Edge(Vertex &vertex_a, Vertex &vertex_b, double weight):
-    vertex_a(&vertex_a), vertex_b(&vertex_b), weight(weight)
+Edge::Edge(std::shared_ptr<Vertex> vertex_a, std::shared_ptr<Vertex> vertex_b, double weight):
+    vertex_a(vertex_a), vertex_b(vertex_b), weight(weight)
 {}
 
 
-std::shared_ptr<Vertex> Edge::get_a() const
+const Vertex &Edge::get_a() const
 {
-    return vertex_a;
+    return *vertex_a;
 }
 
 
-std::shared_ptr<Vertex> Edge::get_b() const
+const Vertex &Edge::get_b() const
 {
-    return vertex_b;
+    return *vertex_b;
 }
 
 
-std::shared_ptr<Vertex> Edge::get_other(const Vertex &thing) const
+const Vertex &Edge::get_other(const Vertex &thing) const
 {
     if(thing.get_id() == vertex_a->get_id()) {
-        return vertex_a;
+        return *vertex_a;
     }
     else if (thing.get_id() == vertex_b->get_id()) {
-        return vertex_b;
+        return *vertex_b;
     }
     else {
-        return nullptr;
+        return Vertex(-1);
     }
 }
 
@@ -143,10 +143,10 @@ const Path Graph::find_path(int start, int end) const
 {
     int cur_i = start;
     std::unordered_set<int> closed_set = {};
-    std::unordered_map<int, double> node_weight = {};
+    std::unordered_map<int, double> open_weight = {};
     std::unordered_map<int, int> prev_dict = {};
 
-    node_weight[start] = 0.0;
+    open_weight[start] = 0.0;
 
     // Limit the number of nodes we check to the number of nodes, in case I do something
     // silly
@@ -156,8 +156,8 @@ const Path Graph::find_path(int start, int end) const
             break;
         }
         // Get the current weight and the edges out of this vertex
-        double cur_weight = node_weight[cur_i];
-        const std::unordered_map<int, double> out_edges = vertex_list[cur_i]->get_edges();
+        double cur_weight = open_weight[cur_i];
+        auto out_edges = vertex_list[cur_i]->get_edges();
         // Check each edge leaving the vertex
         for (auto edge: out_edges) {
             // Don't bother checking if we've already closed the other side of the edge
@@ -165,25 +165,25 @@ const Path Graph::find_path(int start, int end) const
                 continue;
             }
             double new_weight = cur_weight + edge.second;
-            if (node_weight.find(edge.first) != node_weight.end()) {
+            if (open_weight.find(edge.first) != open_weight.end()) {
                 // vertex has already been visited, update if this has a lower cost than previous visit.
-                if(new_weight < node_weight[edge.first]) {
-                    node_weight[edge.first] = new_weight;
+                if(new_weight < open_weight[edge.first]) {
+                    open_weight[edge.first] = new_weight;
                     prev_dict[edge.first] = cur_i;
                 }
             }
             else {
                 // Never visited this vertex, so update
-                node_weight[edge.first] = new_weight;
+                open_weight[edge.first] = new_weight;
                 prev_dict[edge.first] = cur_i;
             }
         }
         // Done with current vertex, add to closed set and remove from possible nodes.
         closed_set.insert(cur_i);
-        node_weight.erase(cur_i);
+        open_weight.erase(cur_i);
         // Find next vertex to work from (lowest weight thus far)
         std::pair<int, double> cur_min_pair = {-1, INFINITY};
-        for (auto test_weight_pair: node_weight) {
+        for (auto test_weight_pair: open_weight) {
             // Checking closed should be unnecessary?
             // if (closed_set.find(test_weight_pair.first) != closed_set.end()) {
             //     continue;
@@ -200,7 +200,7 @@ const Path Graph::find_path(int start, int end) const
         cur_i = cur_min_pair.first;
     }
     // If we're here, we found a path
-    Path out_path(node_weight[end]);
+    Path out_path(open_weight[end]);
     cur_i = end;
     for (int iter_i=0; iter_i < vertex_list.size(); ++iter_i) {
         out_path.push_front(cur_i);

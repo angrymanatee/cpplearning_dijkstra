@@ -21,7 +21,7 @@ namespace dijkstra {
             Vertex(int id);
             int get_id() const;
             void add_edge(std::shared_ptr<Edge> edge);
-            std::unordered_map<int, double> get_edges() const;
+            const std::vector<std::pair<int, double>> get_edges() const;
         private:
             int id;
             std::vector<std::shared_ptr<Edge>> conn_list;
@@ -29,10 +29,10 @@ namespace dijkstra {
 
     class Edge {
         public:
-            Edge(Vertex &vertex_a, Vertex &vertex_b, double weight);
-            std::shared_ptr<Vertex> get_a() const;
-            std::shared_ptr<Vertex> get_b() const;
-            std::shared_ptr<Vertex> get_other(const Vertex &thing) const;
+            Edge(std::shared_ptr<Vertex> vertex_a, std::shared_ptr<Vertex> vertex_b, double weight);
+            const Vertex &get_a() const;
+            const Vertex &get_b() const;
+            const Vertex &get_other(const Vertex &thing) const;
             double get_weight() const;
         private:
             std::shared_ptr<Vertex> vertex_a;
