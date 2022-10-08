@@ -211,3 +211,93 @@ const Path Graph::find_path(int start, int end) const
     }
     return out_path;
 }
+
+
+struct TestSetup {
+    int n_graphs;
+    int n_paths;
+    int n_nodes;
+    double density;
+    double dist_min;
+    double dist_max;
+    bool debug_print;
+    friend std::ostream &operator<<(std::ostream &os, TestSetup const &setup)
+    {
+        os << "GraphTestSetup(n_graphs=" << setup.n_graphs << ", n_paths=" << setup.n_paths
+            << ", n_nodes=" << setup.n_nodes << ", density=" << setup.density
+            << ", dist_min=" << setup.dist_min << ", dist_max=" << setup.dist_max
+            << ", debug_print=" << setup.debug_print << ")";
+        return os;
+    };
+};
+
+
+double run_test(const TestSetup &setup)
+{
+    std::cout << "Running " << setup << "\n";
+    // Initialize path setup.  Pretty sure this grabs system clock or something to initialize, so it should be fine
+    // setting up the same way as above.
+    std::random_device rd;
+    std::default_random_engine generator(rd());
+    std::uniform_int_distribution<int> path_dist(0, setup.n_nodes-1);  // Dist is [0, n-1] inclusive
+
+    int n_trials = setup.n_graphs * setup.n_paths;
+    int n_paths_found = 0;
+    double total_weight = 0.0;
+    std::vector<double> weight_list(n_trials);
+    for (int graph_i = 0; graph_i < setup.n_graphs; ++graph_i) {
+        Graph graph(setup.n_nodes, setup.density, setup.dist_min, setup.dist_max);
+        if (setup.debug_print) {
+            std::cout << "Graph " << graph_i << "\n" << graph;
+        }
+        // Dump graph to screen or something for debugging?
+        for (int path_i = 0; path_i < setup.n_paths; ++path_i) {
+            int start = path_dist(generator);
+            int end = path_dist(generator);
+            while (start == end) {
+                end = path_dist(generator);
+            }
+            if (setup.debug_print) {
+                std::cout << "Find Path from " << start << " to " << end << "\n";
+            }
+            Path out_path = graph.find_path(start, end);
+            double weight = out_path.get_weight();
+            if (weight > 0) {
+                if (setup.debug_print) {
+                    std::cout << "Path From " << start << " to " << end << " Found\n" << out_path;
+                }
+                ++n_paths_found;
+                total_weight += weight;
+            }
+            else if (setup.debug_print) {
+                std::cout << "No Path from " << start << " to " << end << " Found\n";
+            }
+        }
+    }
+    double weight_mean = total_weight / n_trials;
+    std::cout << "Mean Weight = " << weight_mean << std::endl;
+    return weight_mean;
+}
+
+
+int main() {
+    TestSetup setup = {
+        .n_graphs = 1000,
+        .n_paths = 10,
+        .n_nodes = 50,
+        .density = 0.4,
+        .dist_min = 1.0,
+        .dist_max = 10.0,
+        .debug_print = false,
+    };
+
+    setup.density = 0.4;
+    std::cout << "Run Test, density = " << setup.density << std::endl;
+    run_test(setup);
+
+    setup.density = 0.2;
+    std::cout << "Run Test, density = " << setup.density << std::endl;
+    run_test(setup);
+
+    return 0;
+}
