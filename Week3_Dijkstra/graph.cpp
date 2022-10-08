@@ -324,15 +324,11 @@ int main() {
     bool run_output = true;
     if (run_output) {
         setup.density = 0.4;
-        std::cout << "Run Test, density = " << setup.density << std::endl;
         run_test(setup);
-
         setup.density = 0.2;
-        std::cout << "Run Test, density = " << setup.density << std::endl;
         run_test(setup);
     }
     else {
-        std::cout << "Run Test, density = " << setup.density << std::endl;
         run_test(setup);
     }
     return 0;
