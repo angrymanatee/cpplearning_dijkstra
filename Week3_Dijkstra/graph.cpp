@@ -223,12 +223,16 @@ struct TestSetup {
     double density;
     double dist_min;
     double dist_max;
+    bool random_paths;
     bool debug_print;
     friend std::ostream &operator<<(std::ostream &os, TestSetup const &setup)
     {
-        os << "GraphTestSetup(n_graphs=" << setup.n_graphs << ", n_paths=" << setup.n_paths
-            << ", n_nodes=" << setup.n_nodes << ", density=" << setup.density
+        os << "GraphTestSetup(n_graphs=" << setup.n_graphs
+            << ", n_paths=" << setup.n_paths
+            << ", n_nodes=" << setup.n_nodes
+            << ", density=" << setup.density
             << ", dist_min=" << setup.dist_min << ", dist_max=" << setup.dist_max
+            << ", random_paths=" << setup.random_paths
             << ", debug_print=" << setup.debug_print << ")";
         return os;
     };
@@ -244,7 +248,24 @@ double run_test(const TestSetup &setup)
     std::default_random_engine generator(rd());
     std::uniform_int_distribution<int> path_dist(0, setup.n_nodes-1);  // Dist is [0, n-1] inclusive
 
-    int n_trials = setup.n_graphs * setup.n_paths;
+    int n_paths = setup.n_nodes * (setup.n_nodes - 1) / 2;
+    std::vector<std::pair<int, int>> path_pair;
+    if (setup.random_paths) {
+        n_paths = setup.n_paths;
+    }
+    else {
+        // Number of paths between nodes is the number of nodes squared (all pairs of nodes), without paths from nodes
+        // back to itself (n_nodes) and symmetric paths (i to j == j to i).  This is the combinatorics thing of
+        // N-choose-2.
+        n_paths = setup.n_nodes * (setup.n_nodes - 1) / 2;
+        for (int path_a = 0; path_a < setup.n_nodes-1; ++path_a) {
+            for (int path_b = path_a + 1; path_b < setup.n_nodes; ++path_b) {
+                path_pair.push_back(std::pair<int, int>(path_a, path_b));
+            }
+        }
+    }
+
+    int n_trials = setup.n_graphs * n_paths;
     int n_paths_found = 0;
     double total_weight = 0.0;
     std::vector<double> weight_list(n_trials);
@@ -254,11 +275,17 @@ double run_test(const TestSetup &setup)
             std::cout << "Graph " << graph_i << "\n" << graph;
         }
         // Dump graph to screen or something for debugging?
-        for (int path_i = 0; path_i < setup.n_paths; ++path_i) {
-            int start = path_dist(generator);
-            int end = path_dist(generator);
-            while (start == end) {
+        for (int path_i = 0; path_i < n_paths; ++path_i) {
+            int start, end;
+            if (setup.random_paths) {
+                start = path_dist(generator);
                 end = path_dist(generator);
+                while (start == end) {
+                    end = path_dist(generator);
+                }
+            }
+            else {
+                std::tie(start, end) = path_pair[path_i];
             }
             if (setup.debug_print) {
                 std::cout << "Find Path from " << start << " to " << end << "\n";
@@ -277,7 +304,7 @@ double run_test(const TestSetup &setup)
             }
         }
     }
-    double weight_mean = total_weight / n_trials;
+    double weight_mean = total_weight / n_paths_found;
     std::cout << "Mean Weight = " << weight_mean << std::endl;
     return weight_mean;
 }
@@ -285,22 +312,28 @@ double run_test(const TestSetup &setup)
 
 int main() {
     TestSetup setup = {
-        .n_graphs = 1000,
+        .n_graphs = 100,
         .n_paths = 10,
         .n_nodes = 50,
         .density = 0.4,
         .dist_min = 1.0,
         .dist_max = 10.0,
+        .random_paths = false,
         .debug_print = false,
     };
+    bool run_output = true;
+    if (run_output) {
+        setup.density = 0.4;
+        std::cout << "Run Test, density = " << setup.density << std::endl;
+        run_test(setup);
 
-    setup.density = 0.4;
-    std::cout << "Run Test, density = " << setup.density << std::endl;
-    run_test(setup);
-
-    setup.density = 0.2;
-    std::cout << "Run Test, density = " << setup.density << std::endl;
-    run_test(setup);
-
+        setup.density = 0.2;
+        std::cout << "Run Test, density = " << setup.density << std::endl;
+        run_test(setup);
+    }
+    else {
+        std::cout << "Run Test, density = " << setup.density << std::endl;
+        run_test(setup);
+    }
     return 0;
 }
