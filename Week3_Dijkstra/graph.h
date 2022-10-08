@@ -7,6 +7,7 @@
 #define _GRAPH_H
 
 
+#include <iostream>
 #include <memory>
 #include <vector>
 #include <list>
@@ -15,6 +16,11 @@
 
 
 namespace dijkstra {
+
+
+    // Circular referencing shenanigans.  Let the compiler know Edge will be defined now.
+    class Edge;
+
 
     class Vertex {
         public:
@@ -27,6 +33,7 @@ namespace dijkstra {
             int id;
             std::vector<std::shared_ptr<Edge>> conn_list;
     };
+
 
     class Edge {
         public:
@@ -47,6 +54,7 @@ namespace dijkstra {
             double weight;
     };
 
+
     // Need to define this below Edge, since the compiler doesn't know what Edge is when Vertix is declared
     std::ostream &operator<<(std::ostream &os, Vertex const &vert)
     {
@@ -60,7 +68,7 @@ namespace dijkstra {
 
     class Path {
         public:
-            Path(double weight=0);
+            Path(double weight);
             double get_weight() const;
             void push_front(int id);
             void push_back(int id);
@@ -78,6 +86,7 @@ namespace dijkstra {
             double weight;
             std::list<int> path;
     };
+
 
     class Graph {
         public:

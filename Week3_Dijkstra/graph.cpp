@@ -7,13 +7,15 @@
 
 #include <random>
 #include <algorithm>
+#include <numeric>
+#include <stdexcept>
 #include "graph.h"
 
 
 using namespace dijkstra;
 
 
-Vertex::Vertex(int id): id(id), conn_list(0)
+Vertex::Vertex(int id): id(id), conn_list(0, nullptr)
 {}
 
 
@@ -61,13 +63,13 @@ const Vertex &Edge::get_b() const
 const Vertex &Edge::get_other(const Vertex &thing) const
 {
     if(thing.get_id() == vertex_a->get_id()) {
-        return *vertex_a;
+        return get_b();
     }
     else if (thing.get_id() == vertex_b->get_id()) {
-        return *vertex_b;
+        return get_a();
     }
     else {
-        return Vertex(-1);
+        throw std::invalid_argument("Input vertex not in edge");
     }
 }
 
@@ -78,7 +80,7 @@ double Edge::get_weight() const
 }
 
 
-Path::Path(double weight=0): weight(0), path()
+Path::Path(double weight): weight(weight), path()
 {}
 
 
@@ -193,11 +195,12 @@ const Path Graph::find_path(int start, int end) const
             }
         }
         // No more nodes to check, so end must not be reachable from start.
+        cur_i = cur_min_pair.first;
         if (cur_i == -1) {
             // Not sure how to do exceptions yet, so I'm just going to return an empty path
+            std::cout << "No Path found!" << std::endl;
             return Path(-1);
         }
-        cur_i = cur_min_pair.first;
     }
     // If we're here, we found a path
     Path out_path(open_weight[end]);
