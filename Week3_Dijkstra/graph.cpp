@@ -21,6 +21,7 @@ MinHeap::MinHeap(): queue(compare_second), val_map()
 
 void MinHeap::set(int index, double value)
 {
+    // Note we don't go through the priority queue to remove the outdated value.
     val_map[index] = value;
     queue.push(queue_val(index, value));
 }
@@ -35,6 +36,9 @@ double MinHeap::get(int index) const
 
 double MinHeap::operator[](int index) const
 {
+    // Note this doesn't allow setting.  The set version of this return a reference to the data.  The value added to
+    // the priority_queue shouldn't be changed after pushing in.  To avoid this, just don't allow setting and make
+    // const.
     return get(index);
 }
 
@@ -56,11 +60,14 @@ queue_val MinHeap::get_min() {
     while (!queue.empty()) {
         out = queue.top();
         queue.pop();
+        // Instead of removing oudated values when setting, just skip outdated weights that don't match values in the
+        // val_map.  This avoids rebalancing the priority_queue.
         if (val_map.find(out.first) != val_map.end() && val_map[out.first] == out.second) {
             val_map.erase(out.first);
             return out;
         }
     }
+    // If we're here the queue doesn't have any useful elements.
     out = {-1, 0.0};
     return out;
 }
@@ -90,6 +97,8 @@ void Vertex::add_edge(std::shared_ptr<Edge> edge)
 
 const std::vector<std::pair<int, double>> Vertex::get_edges() const
 {
+    // We probably could precompute this for the version of the graphs we have.  However, I'm going to assume users
+    // can add new nodes to the graph, so precomputing isn't the best idea.
     std::vector<std::pair<int, double>> out_list;
     for (auto edge : conn_list) {
         int other_i = edge->get_other(*this).get_id();
@@ -202,14 +211,13 @@ const Path Graph::find_path(int start, int end) const
 {
     int cur_i = start;
     double cur_weight = 0.0;
-    std::unordered_set<int> closed_set = {};
-    MinHeap open_weight;
-    std::unordered_map<int, int> prev_dict = {};
+    std::unordered_set<int> closed_set = {};  // only need to remember which nodes have been visited
+    MinHeap open_weight;  // Min heap to make finding minimum value fast
+    std::unordered_map<int, int> prev_dict = {};  // Points to previous node
 
     open_weight.set(start, 0.0);
 
-    // Limit the number of nodes we check to the number of nodes, in case I do something
-    // silly
+    // Limit the number of nodes we check to the number of nodes, in case I do something silly
     for (int iter_i=0; iter_i < vertex_list.size(); ++iter_i) {
         // We're done if we're at the end
         if (cur_i == end) {
@@ -261,6 +269,9 @@ const Path Graph::find_path(int start, int end) const
 }
 
 
+/**
+ * Helper struct to make test setup simpler
+*/
 struct TestSetup {
     int n_graphs;
     int n_paths;
@@ -310,16 +321,18 @@ double run_test(const TestSetup &setup)
         }
     }
 
+    // Generate paths
     int n_trials = setup.n_graphs * n_paths;
-    std::vector<double> mean_weight_list;
+    std::vector<double> mean_weight_list;  // mean weight for each graph
     for (int graph_i = 0; graph_i < setup.n_graphs; ++graph_i) {
         int n_paths_found = 0;
         double total_weight = 0.0;
+        // Initialize graph.  Should be freed up after going out of scope (each iteration).
         Graph graph(setup.n_nodes, setup.density, setup.dist_min, setup.dist_max);
         if (setup.debug_print) {
             std::cout << "Graph " << graph_i << "\n" << graph;
         }
-        // Dump graph to screen or something for debugging?
+        // Iterate over paths, sampling randomly or doing every possible.
         for (int path_i = 0; path_i < n_paths; ++path_i) {
             int start, end;
             if (setup.random_paths) {
@@ -350,7 +363,9 @@ double run_test(const TestSetup &setup)
         }
         mean_weight_list.push_back(total_weight / n_paths_found);
     }
-    double weight_mean = std::accumulate(mean_weight_list.begin(), mean_weight_list.end(), 0.0) / mean_weight_list.size();
+    // Compute mean weight of all graphs and standard deviation of weight means (Central Limit Theorem, etc etc)
+    double weight_mean = std::accumulate(mean_weight_list.begin(), mean_weight_list.end(), 0.0);
+    weight_mean /= mean_weight_list.size();
     double weight_var = 0.0;
     for (auto mw: mean_weight_list) {
         weight_var += std::pow(mw - weight_mean, 2);
@@ -363,6 +378,7 @@ double run_test(const TestSetup &setup)
 
 
 int main() {
+    // Main setup parameters
     TestSetup setup = {
         .n_graphs = 100,
         .n_paths = 10,
@@ -375,12 +391,14 @@ int main() {
     };
     bool run_output = true;
     if (run_output) {
+        // Run for homework results (with different densities)
         setup.density = 0.4;
         run_test(setup);
         setup.density = 0.2;
         run_test(setup);
     }
     else {
+        // Run debugging setup
         run_test(setup);
     }
     return 0;
