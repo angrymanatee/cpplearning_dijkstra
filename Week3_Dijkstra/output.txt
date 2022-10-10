@@ -1,0 +1,6 @@
+Running GraphTestSetup(n_graphs=100, n_paths=10, n_nodes=50, density=0.4, dist_min=1, dist_max=10, random_paths=0, debug_print=0)
+ - Mean Weight = 4.70245
+ - Std. Dev.   = 0.235589
+Running GraphTestSetup(n_graphs=100, n_paths=10, n_nodes=50, density=0.2, dist_min=1, dist_max=10, random_paths=0, debug_print=0)
+ - Mean Weight = 6.90287
+ - Std. Dev.   = 0.407706
