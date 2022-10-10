@@ -15,6 +15,63 @@
 using namespace dijkstra;
 
 
+MinHeap::MinHeap(): queue(compare_second), val_map()
+{}
+
+
+void MinHeap::set(int index, double value)
+{
+    val_map[index] = value;
+    queue.push(queue_val(index, value));
+}
+
+
+double MinHeap::get(int index) const
+{
+    // Note unordered_map operator[] is not const because it will add an element if it is not found.
+    return val_map.at(index);
+}
+
+
+double MinHeap::operator[](int index) const
+{
+    return get(index);
+}
+
+
+double MinHeap::contains(int index) const
+{
+    return val_map.find(index) != val_map.end();
+}
+
+
+void MinHeap::erase(int index)
+{
+    val_map.erase(index);
+}
+
+
+queue_val MinHeap::get_min() {
+    queue_val out;
+    while (!queue.empty()) {
+        out = queue.top();
+        queue.pop();
+        if (val_map.find(out.first) != val_map.end() && val_map[out.first] == out.second) {
+            val_map.erase(out.first);
+            return out;
+        }
+    }
+    out = {-1, 0.0};
+    return out;
+}
+
+
+int MinHeap::size() const
+{
+    return val_map.size();
+}
+
+
 Vertex::Vertex(int id): id(id), conn_list(0, nullptr)
 {}
 
@@ -144,11 +201,12 @@ Graph::Graph(int n_nodes, double density, double dist_min, double dist_max):
 const Path Graph::find_path(int start, int end) const
 {
     int cur_i = start;
+    double cur_weight = 0.0;
     std::unordered_set<int> closed_set = {};
-    std::unordered_map<int, double> open_weight = {};
+    MinHeap open_weight;
     std::unordered_map<int, int> prev_dict = {};
 
-    open_weight[start] = 0.0;
+    open_weight.set(start, 0.0);
 
     // Limit the number of nodes we check to the number of nodes, in case I do something
     // silly
@@ -157,8 +215,6 @@ const Path Graph::find_path(int start, int end) const
         if (cur_i == end) {
             break;
         }
-        // Get the current weight and the edges out of this vertex
-        double cur_weight = open_weight[cur_i];
         auto out_edges = vertex_list[cur_i]->get_edges();
         // Check each edge leaving the vertex
         for (auto edge: out_edges) {
@@ -167,16 +223,16 @@ const Path Graph::find_path(int start, int end) const
                 continue;
             }
             double new_weight = cur_weight + edge.second;
-            if (open_weight.find(edge.first) != open_weight.end()) {
+            if (open_weight.contains(edge.first)) {
                 // vertex has already been visited, update if this has a lower cost than previous visit.
                 if(new_weight < open_weight[edge.first]) {
-                    open_weight[edge.first] = new_weight;
+                    open_weight.set(edge.first, new_weight);
                     prev_dict[edge.first] = cur_i;
                 }
             }
             else {
                 // Never visited this vertex, so update
-                open_weight[edge.first] = new_weight;
+                open_weight.set(edge.first, new_weight);
                 prev_dict[edge.first] = cur_i;
             }
         }
@@ -184,18 +240,8 @@ const Path Graph::find_path(int start, int end) const
         closed_set.insert(cur_i);
         open_weight.erase(cur_i);
         // Find next vertex to work from (lowest weight thus far)
-        std::pair<int, double> cur_min_pair = {-1, INFINITY};
-        for (auto test_weight_pair: open_weight) {
-            // Checking closed should be unnecessary?
-            // if (closed_set.find(test_weight_pair.first) != closed_set.end()) {
-            //     continue;
-            // }
-            if (test_weight_pair.second < cur_min_pair.second) {
-                cur_min_pair = test_weight_pair;
-            }
-        }
+        std::tie(cur_i, cur_weight) = open_weight.get_min();
         // No more nodes to check, so end must not be reachable from start.
-        cur_i = cur_min_pair.first;
         if (cur_i == -1) {
             // Not sure how to do exceptions yet, so I'm just going to return an empty path
             std::cout << "No Path found!" << std::endl;
@@ -203,8 +249,7 @@ const Path Graph::find_path(int start, int end) const
         }
     }
     // If we're here, we found a path
-    Path out_path(open_weight[end]);
-    cur_i = end;
+    Path out_path(cur_weight);
     for (int iter_i=0; iter_i < vertex_list.size(); ++iter_i) {
         out_path.push_front(cur_i);
         if (cur_i == start) {

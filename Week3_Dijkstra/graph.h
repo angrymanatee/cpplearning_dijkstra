@@ -11,11 +11,42 @@
 #include <memory>
 #include <vector>
 #include <list>
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 
 
 namespace dijkstra {
+
+    typedef std::pair<int, double> queue_val;
+
+    bool compare_second(queue_val &a, queue_val &b) {
+        return a.second > b.second;
+    }
+
+    class MinHeap {
+        public:
+            MinHeap();
+            void set(int index, double value);
+            double get(int index) const;
+            double operator[](int index) const;
+            double contains(int index) const;
+            void erase(int index);
+            queue_val get_min();
+            int size() const;
+            friend std::ostream &operator<<(std::ostream &os, MinHeap &min_heap)
+            {
+                os << "MinHeap(";
+                for (auto item: min_heap.val_map) {
+                    os << "<" << item.first << ", " << item.second << ">, ";
+                }
+                os << ")";
+                return os;
+            }
+        private:
+            std::priority_queue<queue_val, std::vector<queue_val>, decltype(&compare_second)> queue;
+            std::unordered_map<int, double> val_map;
+    };
 
 
     // Circular referencing shenanigans.  Let the compiler know Edge will be defined now.
