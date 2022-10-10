@@ -266,10 +266,10 @@ double run_test(const TestSetup &setup)
     }
 
     int n_trials = setup.n_graphs * n_paths;
-    int n_paths_found = 0;
-    double total_weight = 0.0;
-    std::vector<double> weight_list(n_trials);
+    std::vector<double> mean_weight_list;
     for (int graph_i = 0; graph_i < setup.n_graphs; ++graph_i) {
+        int n_paths_found = 0;
+        double total_weight = 0.0;
         Graph graph(setup.n_nodes, setup.density, setup.dist_min, setup.dist_max);
         if (setup.debug_print) {
             std::cout << "Graph " << graph_i << "\n" << graph;
@@ -303,9 +303,16 @@ double run_test(const TestSetup &setup)
                 std::cout << "No Path from " << start << " to " << end << " Found\n";
             }
         }
+        mean_weight_list.push_back(total_weight / n_paths_found);
     }
-    double weight_mean = total_weight / n_paths_found;
-    std::cout << "Mean Weight = " << weight_mean << std::endl;
+    double weight_mean = std::accumulate(mean_weight_list.begin(), mean_weight_list.end(), 0.0) / mean_weight_list.size();
+    double weight_var = 0.0;
+    for (auto mw: mean_weight_list) {
+        weight_var += std::pow(mw - weight_mean, 2);
+    }
+    weight_var /= mean_weight_list.size() - 1;
+    double weight_std = std::sqrt(weight_var);
+    std::cout << " - Mean Weight = " << weight_mean << "\n - Std. Dev.   = " << weight_std << std::endl;
     return weight_mean;
 }
 
