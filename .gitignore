@@ -3,6 +3,12 @@
 !/**/
 !*.*
 
+# Ignore Zip Files
+*.zip
+*.tar.gz
+*.gz
+*.tar
+
 # Created by https://www.toptal.com/developers/gitignore/api/windows,visualstudiocode,c++,cmake
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,visualstudiocode,c++,cmake
 
