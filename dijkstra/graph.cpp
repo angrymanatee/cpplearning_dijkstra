@@ -270,9 +270,10 @@ const Path Graph::find_path(int start, int end) const
 
 
 /**
- * Helper struct to make test setup simpler
+ * Shortest Path Test
 */
-struct TestSetup {
+class ShortestPathTest {
+    public:
     int n_graphs;
     int n_paths;
     int n_nodes;
@@ -281,7 +282,14 @@ struct TestSetup {
     double dist_max;
     bool random_paths;
     bool debug_print;
-    friend std::ostream &operator<<(std::ostream &os, TestSetup const &setup)
+
+    ShortestPathTest(int n_graphs, int n_paths, int n_nodes, double density, double dist_min, double dist_max,
+                     bool random_paths, bool debug_print):
+            n_graphs(n_graphs), n_paths(n_paths), n_nodes(n_nodes), density(density), dist_min(dist_min),
+            dist_max(dist_max), random_paths(random_paths), debug_print(debug_print)
+    {}
+
+    friend std::ostream &operator<<(std::ostream &os, ShortestPathTest const &setup)
     {
         os << "GraphTestSetup(n_graphs=" << setup.n_graphs
             << ", n_paths=" << setup.n_paths
@@ -292,114 +300,115 @@ struct TestSetup {
             << ", debug_print=" << setup.debug_print << ")";
         return os;
     };
-};
 
+    double test_shortest_path()
+    {
+        std::cout << "Running " << *this << "\n";
+        // Initialize path setup.  Pretty sure this grabs system clock or something to initialize, so it should be fine
+        // setting up the same way as above.
+        std::random_device rd;
+        std::default_random_engine generator(rd());
+        std::uniform_int_distribution<int> path_dist(0, n_nodes-1);  // Dist is [0, n-1] inclusive
 
-double run_test(const TestSetup &setup)
-{
-    std::cout << "Running " << setup << "\n";
-    // Initialize path setup.  Pretty sure this grabs system clock or something to initialize, so it should be fine
-    // setting up the same way as above.
-    std::random_device rd;
-    std::default_random_engine generator(rd());
-    std::uniform_int_distribution<int> path_dist(0, setup.n_nodes-1);  // Dist is [0, n-1] inclusive
-
-    int n_paths = setup.n_nodes * (setup.n_nodes - 1) / 2;
-    std::vector<std::pair<int, int>> path_pair;
-    if (setup.random_paths) {
-        n_paths = setup.n_paths;
-    }
-    else {
-        // Number of paths between nodes is the number of nodes squared (all pairs of nodes), without paths from nodes
-        // back to itself (n_nodes) and symmetric paths (i to j == j to i).  This is the combinatorics thing of
-        // N-choose-2.
-        n_paths = setup.n_nodes * (setup.n_nodes - 1) / 2;
-        for (int path_a = 0; path_a < setup.n_nodes-1; ++path_a) {
-            for (int path_b = path_a + 1; path_b < setup.n_nodes; ++path_b) {
-                path_pair.push_back(std::pair<int, int>(path_a, path_b));
+        int n_paths = n_nodes * (n_nodes - 1) / 2;
+        std::vector<std::pair<int, int>> path_pair;
+        if (random_paths) {
+            n_paths = n_paths;
+        }
+        else {
+            // Number of paths between nodes is the number of nodes squared (all pairs of nodes), without paths from
+            // nodes back to itself (n_nodes) and symmetric paths (i to j == j to i).  This is the combinatorics thing
+            // of N-choose-2.
+            n_paths = n_nodes * (n_nodes - 1) / 2;
+            for (int path_a = 0; path_a < n_nodes-1; ++path_a) {
+                for (int path_b = path_a + 1; path_b < n_nodes; ++path_b) {
+                    path_pair.push_back(std::pair<int, int>(path_a, path_b));
+                }
             }
         }
-    }
 
-    // Generate paths
-    int n_trials = setup.n_graphs * n_paths;
-    std::vector<double> mean_weight_list;  // mean weight for each graph
-    for (int graph_i = 0; graph_i < setup.n_graphs; ++graph_i) {
-        int n_paths_found = 0;
-        double total_weight = 0.0;
-        // Initialize graph.  Should be freed up after going out of scope (each iteration).
-        Graph graph(setup.n_nodes, setup.density, setup.dist_min, setup.dist_max);
-        if (setup.debug_print) {
-            std::cout << "Graph " << graph_i << "\n" << graph;
-        }
-        // Iterate over paths, sampling randomly or doing every possible.
-        for (int path_i = 0; path_i < n_paths; ++path_i) {
-            int start, end;
-            if (setup.random_paths) {
-                start = path_dist(generator);
-                end = path_dist(generator);
-                while (start == end) {
+        // Generate paths
+        int n_trials = n_graphs * n_paths;
+        std::vector<double> mean_weight_list;  // mean weight for each graph
+        for (int graph_i = 0; graph_i < n_graphs; ++graph_i) {
+            int n_paths_found = 0;
+            double total_weight = 0.0;
+            // Initialize graph.  Should be freed up after going out of scope (each iteration).
+            Graph graph(n_nodes, density, dist_min, dist_max);
+            if (debug_print) {
+                std::cout << "Graph " << graph_i << "\n" << graph;
+            }
+            // Iterate over paths, sampling randomly or doing every possible.
+            for (int path_i = 0; path_i < n_paths; ++path_i) {
+                int start, end;
+                if (random_paths) {
+                    start = path_dist(generator);
                     end = path_dist(generator);
+                    while (start == end) {
+                        end = path_dist(generator);
+                    }
+                }
+                else {
+                    std::tie(start, end) = path_pair[path_i];
+                }
+                if (debug_print) {
+                    std::cout << "Find Path from " << start << " to " << end << "\n";
+                }
+                Path out_path = graph.find_path(start, end);
+                double weight = out_path.get_weight();
+                if (weight > 0) {
+                    if (debug_print) {
+                        std::cout << "Path From " << start << " to " << end << " Found\n" << out_path;
+                    }
+                    ++n_paths_found;
+                    total_weight += weight;
+                }
+                else if (debug_print) {
+                    std::cout << "No Path from " << start << " to " << end << " Found\n";
                 }
             }
-            else {
-                std::tie(start, end) = path_pair[path_i];
-            }
-            if (setup.debug_print) {
-                std::cout << "Find Path from " << start << " to " << end << "\n";
-            }
-            Path out_path = graph.find_path(start, end);
-            double weight = out_path.get_weight();
-            if (weight > 0) {
-                if (setup.debug_print) {
-                    std::cout << "Path From " << start << " to " << end << " Found\n" << out_path;
-                }
-                ++n_paths_found;
-                total_weight += weight;
-            }
-            else if (setup.debug_print) {
-                std::cout << "No Path from " << start << " to " << end << " Found\n";
-            }
+            mean_weight_list.push_back(total_weight / n_paths_found);
         }
-        mean_weight_list.push_back(total_weight / n_paths_found);
+        // Compute mean weight of all graphs and standard deviation of weight means (Central Limit Theorem, etc etc)
+        double weight_mean = std::accumulate(mean_weight_list.begin(), mean_weight_list.end(), 0.0);
+        weight_mean /= mean_weight_list.size();
+        double weight_var = 0.0;
+        for (auto mw: mean_weight_list) {
+            weight_var += std::pow(mw - weight_mean, 2);
+        }
+        weight_var /= mean_weight_list.size() - 1;
+        double weight_std = std::sqrt(weight_var);
+        std::cout << " - Mean Weight = " << weight_mean << "\n - Std. Dev.   = " << weight_std << std::endl;
+        return weight_mean;
     }
-    // Compute mean weight of all graphs and standard deviation of weight means (Central Limit Theorem, etc etc)
-    double weight_mean = std::accumulate(mean_weight_list.begin(), mean_weight_list.end(), 0.0);
-    weight_mean /= mean_weight_list.size();
-    double weight_var = 0.0;
-    for (auto mw: mean_weight_list) {
-        weight_var += std::pow(mw - weight_mean, 2);
-    }
-    weight_var /= mean_weight_list.size() - 1;
-    double weight_std = std::sqrt(weight_var);
-    std::cout << " - Mean Weight = " << weight_mean << "\n - Std. Dev.   = " << weight_std << std::endl;
-    return weight_mean;
-}
+};
 
 
 int main() {
     // Main setup parameters
-    TestSetup setup = {
-        .n_graphs = 100,
-        .n_paths = 10,
-        .n_nodes = 50,
-        .density = 0.4,
-        .dist_min = 1.0,
-        .dist_max = 10.0,
-        .random_paths = false,
-        .debug_print = false,
-    };
+    ShortestPathTest setup(
+        100,  // n_graphs
+        10,  // n_paths
+        50,  // n_nodes
+        0.4,  // density
+        1.0,  // dist_min
+        10.0,  // dist_max
+        false,  // random_paths
+        false // debug_print
+    );
     bool run_output = true;
     if (run_output) {
         // Run for homework results (with different densities)
         setup.density = 0.4;
-        run_test(setup);
+        setup.test_shortest_path();
         setup.density = 0.2;
-        run_test(setup);
+        setup.test_shortest_path();
     }
     else {
         // Run debugging setup
-        run_test(setup);
+        setup.test_shortest_path();
     }
     return 0;
 }
+
+
