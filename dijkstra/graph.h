@@ -19,14 +19,10 @@
 namespace dijkstra {
 
     /**
-     * Helper queue type to make MinHeap more readable.  Data is <index, weight>.
-    */
-    typedef std::pair<int, double> queue_val;
-
-    /**
      * Queue compare function to create min-heap
     */
-    bool compare_second(queue_val &a, queue_val &b) {
+    template <class T>
+    bool compare_second(std::pair<T, double> &a, std::pair<T, double> &b) {
         return a.second > b.second;
     }
 
@@ -35,8 +31,14 @@ namespace dijkstra {
      * 
      * This uses a priority queue to keep track of the minimum weight and a dict to make accessing the weight easy.
     */
+    template <class T>
     class MinHeap {
         public:
+
+            /**
+             * Helper queue type to make MinHeap more readable.  Data is <index, weight>.
+            */
+            typedef std::pair<T, double> queue_val;
 
             /**
              * Constructor for empty min heap.
@@ -46,27 +48,27 @@ namespace dijkstra {
             /**
              * Set index and value.
             */
-            void set(int index, double value);
+            void set(T index, double value);
 
             /**
              * Get value associated with index.
             */
-            double get(int index) const;
+            double get(T index) const;
 
             /**
              * Accessor-only indexing (can't set)
             */
-            double operator[](int index) const;
+            double operator[](T index) const;
 
             /**
              * Helper function to see if the index is in the min-heap
             */
-            double contains(int index) const;
+            double contains(T index) const;
 
             /**
              * Remove index from heap
             */
-            void erase(int index);
+            void erase(T index);
 
             /**
              * Pop the top of the min-heap
@@ -87,9 +89,12 @@ namespace dijkstra {
                 os << ")";
                 return os;
             }
+
         private:
-            std::priority_queue<queue_val, std::vector<queue_val>, decltype(&compare_second)> queue;
-            std::unordered_map<int, double> val_map;
+
+            std::priority_queue<queue_val, std::vector<queue_val>, decltype(&compare_second<T>)> queue;
+            std::unordered_map<T, double> val_map;
+
     };
 
 

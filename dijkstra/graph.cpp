@@ -17,26 +17,30 @@
 using namespace dijkstra;
 
 
-MinHeap::MinHeap(): queue(compare_second), val_map()
+template <class T>
+MinHeap<T>::MinHeap(): queue(compare_second<T>), val_map()
 {}
 
 
-void MinHeap::set(int index, double value)
+template <class T>
+void MinHeap<T>::set(T index, double value)
 {
     // Note we don't go through the priority queue to remove the outdated value.
     val_map[index] = value;
-    queue.push(queue_val(index, value));
+    queue.push(MinHeap<T>::queue_val(index, value));
 }
 
 
-double MinHeap::get(int index) const
+template <class T>
+double MinHeap<T>::get(T index) const
 {
     // Note unordered_map operator[] is not const because it will add an element if it is not found.
     return val_map.at(index);
 }
 
 
-double MinHeap::operator[](int index) const
+template <class T>
+double MinHeap<T>::operator[](T index) const
 {
     // Note this doesn't allow setting.  The set version of this return a reference to the data.  The value added to
     // the priority_queue shouldn't be changed after pushing in.  To avoid this, just don't allow setting and make
@@ -45,19 +49,23 @@ double MinHeap::operator[](int index) const
 }
 
 
-double MinHeap::contains(int index) const
+template <class T>
+double MinHeap<T>::contains(T index) const
 {
     return val_map.find(index) != val_map.end();
 }
 
 
-void MinHeap::erase(int index)
+template <class T>
+void MinHeap<T>::erase(T index)
 {
     val_map.erase(index);
 }
 
 
-queue_val MinHeap::get_min() {
+template <class T>
+typename MinHeap<T>::queue_val MinHeap<T>::get_min()
+{
     queue_val out;
     while (!queue.empty()) {
         out = queue.top();
@@ -75,7 +83,8 @@ queue_val MinHeap::get_min() {
 }
 
 
-int MinHeap::size() const
+template <class T>
+int MinHeap<T>::size() const
 {
     return val_map.size();
 }
@@ -333,7 +342,7 @@ const Path Graph::find_path(int start, int end) const
     int cur_i = start;
     double cur_weight = 0.0;
     std::unordered_set<int> closed_set = {};  // only need to remember which nodes have been visited
-    MinHeap open_weight;  // Min heap to make finding minimum value fast
+    MinHeap<int> open_weight;  // Min heap to make finding minimum value fast
     std::unordered_map<int, int> prev_dict = {};  // Points to previous node
 
     open_weight.set(start, 0.0);
