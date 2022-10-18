@@ -289,6 +289,7 @@ namespace dijkstra {
         private:
             int n_nodes;
             std::vector<std::shared_ptr<Vertex>> vertex_list;
+            std::vector<std::shared_ptr<Edge>> edge_list;
 
             /**
              * Helper function to create node list

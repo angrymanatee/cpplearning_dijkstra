@@ -189,7 +189,7 @@ const std::list<int> Path::get_path() const
 }
 
 
-Graph::Graph(int n_nodes): n_nodes(n_nodes), vertex_list()
+Graph::Graph(int n_nodes): n_nodes(n_nodes), vertex_list(), edge_list()
 {
     create_node_list(n_nodes);
 }
@@ -216,7 +216,7 @@ Graph::Graph(int n_nodes, double density, double dist_min, double dist_max): Gra
 }
 
 
-Graph::Graph(std::string graph_fname): n_nodes(), vertex_list()
+Graph::Graph(std::string graph_fname): n_nodes(), vertex_list(), edge_list()
 {
     int max_char = 32;
     std::string line;
@@ -261,6 +261,7 @@ void Graph::add_edge(int node_a, int node_b, double weight)
     auto cur_edge = std::make_shared<Edge>(vertex_list[node_a], vertex_list[node_b], weight);
     vertex_list[node_a]->add_edge(cur_edge);
     vertex_list[node_b]->add_edge(cur_edge);
+    edge_list.push_back(std::move(cur_edge));
 }
 
 
