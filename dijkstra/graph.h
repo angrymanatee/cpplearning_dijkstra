@@ -236,6 +236,59 @@ namespace dijkstra {
     };
 
 
+    class Tree {
+        public:
+
+            /**
+             * Create empty tree
+             */
+            Tree();
+
+            /**
+             * Create tree with specified head
+            */
+            Tree(int head_id);
+
+            /**
+             * Set head node
+             */
+            void set_head(int head_id);
+
+            /**
+             * Get head node
+            */
+            const Vertex &get_head() const;
+
+            /**
+             * Add child to tree
+            */
+            void add_child(int parent_id, int child_id, double weight);
+
+            /**
+             * Get total weight
+            */
+            double get_total_weight() const;
+
+            friend std::ostream &operator<<(std::ostream &os, Tree const &tree)
+            {
+                os << "Tree\n";
+                tree.dump_children(os, tree.head->get_id(), 0.0, 0);
+                return os;
+            }
+
+        private:
+            std::shared_ptr<Vertex> head;
+            std::unordered_map<int, std::shared_ptr<Vertex>> vertex_map;
+            std::vector<std::shared_ptr<Edge>> edge_list;
+
+            /**
+             * Helper function for printing tree with tabs
+            */
+            void dump_children(std::ostream &os, int node_i, double weight, int n_indent) const;
+
+    };
+
+
     /**
      * Graph path for dijkstra's algorithm
     */

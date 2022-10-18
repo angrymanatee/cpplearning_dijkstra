@@ -189,6 +189,69 @@ const std::list<int> Path::get_path() const
 }
 
 
+Tree::Tree(): head(nullptr), vertex_map(), edge_list()
+{}
+
+
+Tree::Tree(int head_id): Tree()
+{
+    set_head(head_id);
+}
+
+
+void Tree::set_head(int head_id)
+{
+    if (head != nullptr) {
+        throw std::invalid_argument("Head node already set");
+    }
+    head = std::make_shared<Vertex>(head_id);
+    vertex_map[head_id] = head;
+}
+
+
+const Vertex &Tree::get_head() const
+{
+    return *head;
+}
+
+
+void Tree::add_child(int parent_id, int child_id, double weight)
+{
+    // Make sure child is not already a vertex
+    if (vertex_map.find(child_id) != vertex_map.end()) {
+        throw std::invalid_argument("Child already added");
+    }
+    // Create edge to child
+    vertex_map[child_id] = std::make_shared<Vertex>(child_id);
+    auto cur_edge = std::make_shared<Edge>(vertex_map[parent_id], vertex_map[child_id], weight);
+    vertex_map[parent_id]->add_edge(cur_edge);
+    vertex_map[child_id]->add_edge(cur_edge);
+    edge_list.push_back(std::move(cur_edge));
+}
+
+
+double Tree::get_total_weight() const
+{
+    double total;
+    for (auto edge_ptr : edge_list) {
+        total += edge_ptr->get_weight();
+    }
+    return total;
+}
+
+
+void Tree::dump_children(std::ostream &os, int node_i, double weight, int n_indent) const
+{
+    for (int indent_i = 0; indent_i < n_indent; ++indent_i) {
+        os << "|   ";
+    }
+    os << "|-(" << weight << ")-> " << node_i << "\n";
+    for (auto edge_info : vertex_map.at(node_i)->get_edges()) {
+        dump_children(os, edge_info.first, edge_info.second, n_indent+1);
+    }
+}
+
+
 Graph::Graph(int n_nodes): n_nodes(n_nodes), vertex_list(), edge_list()
 {
     create_node_list(n_nodes);
