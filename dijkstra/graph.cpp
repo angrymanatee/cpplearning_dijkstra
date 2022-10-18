@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <numeric>
 #include <stdexcept>
+#include <fstream>
+#include <regex>
 #include "graph.h"
 
 
@@ -95,6 +97,18 @@ void Vertex::add_edge(std::shared_ptr<Edge> edge)
 }
 
 
+bool Vertex::is_connected_to(int id)
+{
+    for (auto edge : conn_list) {
+        int other_i = edge->get_other(*this).get_id();
+        if (other_i == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 const std::vector<std::pair<int, double>> Vertex::get_edges() const
 {
     // We probably could precompute this for the version of the graphs we have.  However, I'm going to assume users
@@ -175,19 +189,19 @@ const std::list<int> Path::get_path() const
 }
 
 
-Graph::Graph(int n_nodes, double density, double dist_min, double dist_max):
-    n_nodes(n_nodes), density(density), dist_min(dist_min), dist_max(dist_max), vertex_list()
+Graph::Graph(int n_nodes): n_nodes(n_nodes), vertex_list()
+{
+    create_node_list(n_nodes);
+}
+
+
+Graph::Graph(int n_nodes, double density, double dist_min, double dist_max): Graph(n_nodes)
 {
     // Initialize random number generator for the graph
     std::random_device rd;
     std::default_random_engine generator(rd());
     std::uniform_real_distribution<double> edge_dist(0.0, 1.0);
     std::uniform_real_distribution<double> distance_dist(dist_min, dist_max);
-
-    // Generate Node List
-    for (int node_i=0; node_i<n_nodes; ++node_i) {
-        vertex_list.push_back(std::make_shared<Vertex>(node_i));
-    }
 
     // Generate Edges
     for (int cur_i=0; cur_i<n_nodes-1; ++cur_i) {
@@ -196,14 +210,57 @@ Graph::Graph(int n_nodes, double density, double dist_min, double dist_max):
                 continue;
             }
             double edge_weight = distance_dist(generator);
-            auto cur_edge = std::make_shared<Edge>(
-                vertex_list[cur_i],
-                vertex_list[other_i],
-                edge_weight);
-            vertex_list[cur_i]->add_edge(cur_edge);
-            vertex_list[other_i]->add_edge(cur_edge);
+            add_edge(cur_i, other_i, edge_weight);
         }
     }
+}
+
+
+Graph::Graph(std::string graph_fname): n_nodes(), vertex_list()
+{
+    int max_char = 32;
+    std::string line;
+    std::smatch match;
+    std::regex edge_re("(\\d+) (\\d+) (\\d+)\\s*");
+    std::ifstream graph_file(graph_fname);
+
+    // first line is the number of nodes
+    std::getline(graph_file, line);
+    n_nodes = std::stoi(line);
+    create_node_list(n_nodes);
+
+    // Rest of file is edges
+    while (std::getline(graph_file, line)) {
+        if (!std::regex_match(line, match, edge_re)) {
+            continue;
+        }
+        // Note match[0] is full input string (regex thing)
+        int node_a = std::stoi(match[1]);
+        int node_b = std::stoi(match[2]);
+        double weight = std::stod(match[3]);
+        // Looks like the example file has redundant edges (a -> b and b -> a exist).  Since we know this is
+        // undirected and symmetric, just ignore repeated edges.
+        if (vertex_list[node_a]->is_connected_to(node_b)) {
+            continue;
+        }
+        add_edge(node_a, node_b, weight);
+    }
+}
+
+
+void Graph::create_node_list(int n_nodes)
+{
+    for (int node_i=0; node_i<n_nodes; ++node_i) {
+        vertex_list.push_back(std::make_shared<Vertex>(node_i));
+    }
+}
+
+
+void Graph::add_edge(int node_a, int node_b, double weight)
+{
+    auto cur_edge = std::make_shared<Edge>(vertex_list[node_a], vertex_list[node_b], weight);
+    vertex_list[node_a]->add_edge(cur_edge);
+    vertex_list[node_b]->add_edge(cur_edge);
 }
 
 
@@ -381,6 +438,16 @@ class ShortestPathTest {
         std::cout << " - Mean Weight = " << weight_mean << "\n - Std. Dev.   = " << weight_std << std::endl;
         return weight_mean;
     }
+
+    void run_week3_homework()
+    {
+        double orig_density = density;
+        density = 0.4;
+        test_shortest_path();
+        density = 0.2;
+        test_shortest_path();
+        density = orig_density;
+    }
 };
 
 
@@ -396,19 +463,24 @@ int main() {
         false,  // random_paths
         false // debug_print
     );
-    bool run_output = true;
-    if (run_output) {
-        // Run for homework results (with different densities)
-        setup.density = 0.4;
-        setup.test_shortest_path();
-        setup.density = 0.2;
-        setup.test_shortest_path();
+    enum class TestTypes {TestPath, Week3Homework, TestRead};
+
+    TestTypes test_to_run = TestTypes::TestRead;
+    if (test_to_run == TestTypes::Week3Homework) {
+        setup.run_week3_homework();
     }
-    else {
+    else if (test_to_run == TestTypes::Week3Homework) {
         // Run debugging setup
         setup.test_shortest_path();
     }
+    else if (test_to_run == TestTypes::TestRead) {
+        std::string test_fname("./sample_graph.txt");
+        std::cout << "Attempting to read \"" << test_fname << "\"" << std::endl;
+        Graph read_test_graph(test_fname);
+        std::cout << read_test_graph;
+    }
+    else {
+        std::cout << "Unknown Run Setup" << std::endl;
+    }
     return 0;
 }
-
-

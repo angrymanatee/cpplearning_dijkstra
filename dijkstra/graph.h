@@ -119,6 +119,11 @@ namespace dijkstra {
             void add_edge(std::shared_ptr<Edge> edge);
 
             /**
+             * Check to see if this vertex is connected to another vertex
+            */
+           bool is_connected_to(int id);
+
+            /**
              * Get a list of vertices that are connected and their path weights
             */
             const std::vector<std::pair<int, double>> get_edges() const;
@@ -236,7 +241,12 @@ namespace dijkstra {
     */
     class Graph {
         public:
-        
+
+            /**
+             * Create empty graph with n_nodes and no edges
+            */
+            Graph(int n_nodes);
+
             /**
              * Create random graph for testing
              * 
@@ -248,26 +258,43 @@ namespace dijkstra {
             Graph(int n_nodes, double density, double dist_min, double dist_max);
 
             /**
+             * Create graph from file.
+             * 
+             * First line of file shall be the number of nodes.
+             * Each other line is an edge and has three numbers (node_i, node_j, cost)
+            */
+            Graph(std::string graph_fname);
+
+            /**
+             * Helper function to add edge to graph
+            */
+            void add_edge(int node_a, int node_b, double weight);
+
+            /**
              * Find path between node indices using dijkstra's algorithm
             */
             const Path find_path(int start, int end) const;
             
             friend std::ostream &operator<<(std::ostream &os, Graph const &graph)
             {
-                os << "Graph: n_nodes=" << graph.n_nodes << ", density=" << graph.density
-                    << ", dist=(" << graph.dist_min << ", " << graph.dist_max << ")\n";
+                os << "Graph: n_nodes=" << graph.n_nodes << "\n";
+                os << "^^^^^^^^^^^^^^^^^^^^\n";
                 for (auto vert : graph.vertex_list) {
                     os << *vert;
                 }
-                os << std::endl;
+                os << "vvvvvvvvvvvvvvvvvvvv" << std::endl;
                 return os;
             }
+
         private:
             int n_nodes;
-            double density;
-            double dist_min;
-            double dist_max;
             std::vector<std::shared_ptr<Vertex>> vertex_list;
+
+            /**
+             * Helper function to create node list
+            */
+            void create_node_list(int n_nodes);
+
     };
 
 }
