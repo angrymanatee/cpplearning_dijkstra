@@ -21,7 +21,7 @@ namespace dijkstra {
     /**
      * Queue compare function to create min-heap
     */
-    template <class T>
+    template <class T, typename HASH=std::hash<T>>
     bool compare_second(std::pair<T, double> &a, std::pair<T, double> &b) {
         return a.second > b.second;
     }
@@ -31,7 +31,7 @@ namespace dijkstra {
      * 
      * This uses a priority queue to keep track of the minimum weight and a dict to make accessing the weight easy.
     */
-    template <class T>
+    template <class T, typename HASH=std::hash<T>>
     class MinHeap {
         public:
 
@@ -93,7 +93,7 @@ namespace dijkstra {
         private:
 
             std::priority_queue<queue_val, std::vector<queue_val>, decltype(&compare_second<T>)> queue;
-            std::unordered_map<T, double> val_map;
+            std::unordered_map<T, double, HASH> val_map;
 
     };
 

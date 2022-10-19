@@ -17,30 +17,30 @@
 using namespace dijkstra;
 
 
-template <class T>
-MinHeap<T>::MinHeap(): queue(compare_second<T>), val_map()
+template <class T, typename HASH>
+MinHeap<T,HASH>::MinHeap(): queue(&compare_second<T>), val_map()
 {}
 
 
-template <class T>
-void MinHeap<T>::set(T index, double value)
+template <class T, typename HASH>
+void MinHeap<T,HASH>::set(T index, double value)
 {
     // Note we don't go through the priority queue to remove the outdated value.
     val_map[index] = value;
-    queue.push(MinHeap<T>::queue_val(index, value));
+    queue.push(MinHeap<T,HASH>::queue_val(index, value));
 }
 
 
-template <class T>
-double MinHeap<T>::get(T index) const
+template <class T, typename HASH>
+double MinHeap<T,HASH>::get(T index) const
 {
     // Note unordered_map operator[] is not const because it will add an element if it is not found.
     return val_map.at(index);
 }
 
 
-template <class T>
-double MinHeap<T>::operator[](T index) const
+template <class T, typename HASH>
+double MinHeap<T,HASH>::operator[](T index) const
 {
     // Note this doesn't allow setting.  The set version of this return a reference to the data.  The value added to
     // the priority_queue shouldn't be changed after pushing in.  To avoid this, just don't allow setting and make
@@ -49,22 +49,22 @@ double MinHeap<T>::operator[](T index) const
 }
 
 
-template <class T>
-double MinHeap<T>::contains(T index) const
+template <class T, typename HASH>
+double MinHeap<T,HASH>::contains(T index) const
 {
     return val_map.find(index) != val_map.end();
 }
 
 
-template <class T>
-void MinHeap<T>::erase(T index)
+template <class T, typename HASH>
+void MinHeap<T,HASH>::erase(T index)
 {
     val_map.erase(index);
 }
 
 
-template <class T>
-typename MinHeap<T>::queue_val MinHeap<T>::get_min()
+template <class T, typename HASH>
+typename MinHeap<T,HASH>::queue_val MinHeap<T,HASH>::get_min()
 {
     queue_val out;
     while (!queue.empty()) {
@@ -78,13 +78,14 @@ typename MinHeap<T>::queue_val MinHeap<T>::get_min()
         }
     }
     // If we're here the queue doesn't have any useful elements.
-    out = {-1, 0.0};
+    // TODO  This should throw an exception
+    out = {T(), std::numeric_limits<double>::infinity()};
     return out;
 }
 
 
-template <class T>
-int MinHeap<T>::size() const
+template <class T, typename HASH>
+int MinHeap<T,HASH>::size() const
 {
     return val_map.size();
 }
@@ -380,7 +381,7 @@ const Path Graph::find_path(int start, int end) const
         // Find next vertex to work from (lowest weight thus far)
         std::tie(cur_i, cur_weight) = open_weight.get_min();
         // No more nodes to check, so end must not be reachable from start.
-        if (cur_i == -1) {
+        if (!std::isfinite(cur_weight)) {
             // Not sure how to do exceptions yet, so I'm just going to return an empty path
             std::cout << "No Path found!" << std::endl;
             return Path(-1);
