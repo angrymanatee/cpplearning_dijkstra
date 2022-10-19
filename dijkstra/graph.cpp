@@ -651,10 +651,12 @@ int main() {
             break;
         }
         case TestTypes::Week4Test: {
+            std::ofstream graph_file("./tree_results.txt");
             std::cout << "Finding MWT in \"" << test_fname << "\" starting at " << head_node << std::endl;
             Graph read_test_graph(test_fname);
             Tree mst = read_test_graph.find_mst_prim(head_node);
             std::cout << mst;
+            graph_file << mst;
             break;
         }
         default: {
