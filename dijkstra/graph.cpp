@@ -636,30 +636,31 @@ int main() {
 
 
     switch (TestTypes::Week4Test) {
-        case TestTypes::Week3Homework:
+        case TestTypes::Week3Homework: {
             setup.run_week3_homework();
             break;
-        case TestTypes::TestPath:
+        }
+        case TestTypes::TestPath: {
             setup.test_shortest_path();
             break;
-        case TestTypes::TestRead:
-            {
-                std::cout << "Attempting to read \"" << test_fname << "\"" << std::endl;
-                Graph read_test_graph(test_fname);
-                std::cout << read_test_graph;
-            }
+        }
+        case TestTypes::TestRead: {
+            std::cout << "Attempting to read \"" << test_fname << "\"" << std::endl;
+            Graph read_test_graph(test_fname);
+            std::cout << read_test_graph;
             break;
-        case TestTypes::Week4Test:
-            {
-                std::cout << "Finding MWT in \"" << test_fname << "\" starting at " << head_node << std::endl;
-                Graph read_test_graph(test_fname);
-                Tree mst = read_test_graph.find_mst_prim(head_node);
-                std::cout << mst;
-            }
+        }
+        case TestTypes::Week4Test: {
+            std::cout << "Finding MWT in \"" << test_fname << "\" starting at " << head_node << std::endl;
+            Graph read_test_graph(test_fname);
+            Tree mst = read_test_graph.find_mst_prim(head_node);
+            std::cout << mst;
             break;
-        default:
+        }
+        default: {
             std::cout << "Unknown Run Setup" << std::endl;
             break;
+        }
     }
     return 0;
 }
