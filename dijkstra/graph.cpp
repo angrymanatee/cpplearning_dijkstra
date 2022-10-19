@@ -133,6 +133,39 @@ const std::vector<std::pair<int, double>> Vertex::get_edges() const
 }
 
 
+const std::vector<std::pair<int, double>> Vertex::get_edges_a() const
+{
+    // We probably could precompute this for the version of the graphs we have.  However, I'm going to assume users
+    // can add new nodes to the graph, so precomputing isn't the best idea.
+    std::vector<std::pair<int, double>> out_list;
+    for (auto edge : conn_list) {
+        int other_i = edge->get_a().get_id();
+        if (other_i == id) {
+            continue;
+        }
+        double weight = edge->get_weight();
+        out_list.push_back(std::pair<int, double>(other_i, weight));
+    }
+    return out_list;
+}
+
+const std::vector<std::pair<int, double>> Vertex::get_edges_b() const
+{
+    // We probably could precompute this for the version of the graphs we have.  However, I'm going to assume users
+    // can add new nodes to the graph, so precomputing isn't the best idea.
+    std::vector<std::pair<int, double>> out_list;
+    for (auto edge : conn_list) {
+        int other_i = edge->get_b().get_id();
+        if (other_i == id) {
+            continue;
+        }
+        double weight = edge->get_weight();
+        out_list.push_back(std::pair<int, double>(other_i, weight));
+    }
+    return out_list;
+}
+
+
 Edge::Edge(std::shared_ptr<Vertex> vertex_a, std::shared_ptr<Vertex> vertex_b, double weight):
     vertex_a(vertex_a), vertex_b(vertex_b), weight(weight)
 {}
@@ -253,10 +286,10 @@ double Tree::get_total_weight() const
 void Tree::dump_children(std::ostream &os, int node_i, double weight, int n_indent) const
 {
     for (int indent_i = 0; indent_i < n_indent; ++indent_i) {
-        os << "|   ";
+        os << "       |";
     }
-    os << "|-(" << weight << ")-> " << node_i << "\n";
-    for (auto edge_info : vertex_map.at(node_i)->get_edges()) {
+    os << "(w=" << weight << ")-> n=" << node_i << "\n";
+    for (auto edge_info : vertex_map.at(node_i)->get_edges_b()) {
         dump_children(os, edge_info.first, edge_info.second, n_indent+1);
     }
 }
@@ -400,6 +433,65 @@ const Path Graph::find_path(int start, int end) const
 }
 
 
+// A hash function used to hash a pair of any kind.  Kind of a simple implementation, but should work.
+struct hash_pair {
+    template <class T1, class T2>
+    size_t operator()(const std::pair<T1, T2>& p) const
+    {
+        auto hash1 = std::hash<T1>{}(p.first);
+        auto hash2 = std::hash<T2>{}(p.second);
+ 
+        if (hash1 != hash2) {
+            return hash1 ^ hash2;             
+        }
+
+        // If hash1 == hash2, their XOR is zero.
+        return hash1;
+    }
+};
+
+
+const Tree Graph::find_mst_prim(int head) const
+{
+    typedef std::pair<int, int> edge_t;
+
+    Tree mst(head);
+    std::unordered_set<int> closed_set = {head};
+    MinHeap<std::pair<int, int>, hash_pair> open_edges;
+
+    for (auto edge: vertex_list[head]->get_edges()) {
+        open_edges.set(edge_t(head, edge.first), edge.second);
+    }
+
+    // Set number of iterations 
+    for (int iter_i=0; iter_i < n_nodes; ++iter_i) {
+        edge_t next_edge;
+        double next_weight;
+        // Get minimum edge that hasn't been added to the tree yet
+        do {
+            std::tie(next_edge, next_weight) = open_edges.get_min();
+        } while (closed_set.find(next_edge.second) != closed_set.end());
+        if (!std::isfinite(next_weight)) {
+            std::cout << "Unconnected graph!";
+            break;
+        }
+        // Add the lowest edge that's connecting a new node
+        mst.add_child(next_edge.first, next_edge.second, next_weight);
+        // Add new node to closed set so we don't add it again
+        closed_set.insert(next_edge.second);
+        if (closed_set.size() >= n_nodes) {
+            break;
+        }
+        // Add edges out of the new vertex to available edges
+        for (auto edge: vertex_list[next_edge.second]->get_edges()) {
+            open_edges.set(edge_t(next_edge.second, edge.first), edge.second);
+        }
+    }
+
+    return mst;
+}
+
+
 /**
  * Shortest Path Test
 */
@@ -537,24 +629,37 @@ int main() {
         false,  // random_paths
         false // debug_print
     );
-    enum class TestTypes {TestPath, Week3Homework, TestRead};
+    int head_node = 0;
+    std::string test_fname("./sample_graph.txt");
 
-    TestTypes test_to_run = TestTypes::TestRead;
-    if (test_to_run == TestTypes::Week3Homework) {
-        setup.run_week3_homework();
-    }
-    else if (test_to_run == TestTypes::Week3Homework) {
-        // Run debugging setup
-        setup.test_shortest_path();
-    }
-    else if (test_to_run == TestTypes::TestRead) {
-        std::string test_fname("./sample_graph.txt");
-        std::cout << "Attempting to read \"" << test_fname << "\"" << std::endl;
-        Graph read_test_graph(test_fname);
-        std::cout << read_test_graph;
-    }
-    else {
-        std::cout << "Unknown Run Setup" << std::endl;
+    enum class TestTypes {TestPath, Week3Homework, TestRead, Week4Test};
+
+
+    switch (TestTypes::Week4Test) {
+        case TestTypes::Week3Homework:
+            setup.run_week3_homework();
+            break;
+        case TestTypes::TestPath:
+            setup.test_shortest_path();
+            break;
+        case TestTypes::TestRead:
+            {
+                std::cout << "Attempting to read \"" << test_fname << "\"" << std::endl;
+                Graph read_test_graph(test_fname);
+                std::cout << read_test_graph;
+            }
+            break;
+        case TestTypes::Week4Test:
+            {
+                std::cout << "Finding MWT in \"" << test_fname << "\" starting at " << head_node << std::endl;
+                Graph read_test_graph(test_fname);
+                Tree mst = read_test_graph.find_mst_prim(head_node);
+                std::cout << mst;
+            }
+            break;
+        default:
+            std::cout << "Unknown Run Setup" << std::endl;
+            break;
     }
     return 0;
 }

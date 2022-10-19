@@ -133,6 +133,16 @@ namespace dijkstra {
             */
             const std::vector<std::pair<int, double>> get_edges() const;
 
+            /**
+             * Get the "A" side of all edges attached to this node.  Useful if A vs B is meaningful (e.g. in vs out)
+            */
+            const std::vector<std::pair<int, double>> get_edges_a() const;
+
+            /**
+             * Get the "B" side of all edges attached to this node.  Useful if A vs B is meaningful (e.g. in vs out)
+            */
+            const std::vector<std::pair<int, double>> get_edges_b() const;
+
             friend std::ostream &operator<<(std::ostream &os, Vertex const &vert);
         private:
             int id;
@@ -276,8 +286,9 @@ namespace dijkstra {
 
             friend std::ostream &operator<<(std::ostream &os, Tree const &tree)
             {
-                os << "Tree\n";
+                os << "Tree: w=weight, n=node\n";
                 tree.dump_children(os, tree.head->get_id(), 0.0, 0);
+                os << "Total Weight = " << tree.get_total_weight() << std::endl;
                 return os;
             }
 
@@ -332,6 +343,11 @@ namespace dijkstra {
              * Find path between node indices using dijkstra's algorithm
             */
             const Path find_path(int start, int end) const;
+
+            /**
+             * Generate minimum spanning tree, starting at specified node
+            */
+            const Tree find_mst_prim(int head) const;
             
             friend std::ostream &operator<<(std::ostream &os, Graph const &graph)
             {
